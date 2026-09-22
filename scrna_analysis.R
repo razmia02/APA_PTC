@@ -8,6 +8,11 @@ getwd()
 library(Seurat)
 library(dplyr)
 library(SoupX)
+library(remotes)
+library(knitr)
+library(rmarkdown)
+library(scQCenrich)
+library(mclust)
 
 
 ############ STEP-1: LOAD THE DATASET ##########################
@@ -86,4 +91,36 @@ qc_summary <- seurat@meta.data  %>%
 qc_summary
 
 ##### The summary shows that PTC-3 has very high no of cells than other samples ####
+
+
+
+######### Lets try to run scQCenrich to understand per sample metrics ##########
+
+remotes::install_github(
+  "lemonlyy755/scQCenrich",
+  dependencies = c("Depends", "Imports", "LinkingTo"),
+  repos = BiocManager::repositories()
+)
+
+list_panglao_tissues()
+
+####### Subset the PTC-3 sample ###########
+
+table(seurat$orig.ident)
+
+ptc_3 <- subset(seurat, subset = orig.ident == "PTC-3")
+
+
+qc_ptc_3 <- run_qc_pipeline(
+  obj         = ptc_3,
+  species     = "human",
+  tissue      = c("Thyroid"),
+  method      = "gmm",
+  qc_strength = "auto",
+  report_file = "Results/scQCenrich_ptc-3.html"
+)
+
+head(qc_ptc_3$status_df)
+
+
 
