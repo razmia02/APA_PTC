@@ -13,6 +13,8 @@ library(knitr)
 library(rmarkdown)
 library(scQCenrich)
 library(mclust)
+library(scDblFinder)
+library(singlecellexpreiment)
 
 
 ############ STEP-1: LOAD THE DATASET ##########################
@@ -96,31 +98,61 @@ qc_summary
 
 ######### Lets try to run scQCenrich to understand per sample metrics ##########
 
-remotes::install_github(
-  "lemonlyy755/scQCenrich",
-  dependencies = c("Depends", "Imports", "LinkingTo"),
-  repos = BiocManager::repositories()
-)
-
-list_panglao_tissues()
+list_panglao_tissues() ### Check the list of tissues available in db
 
 ####### Subset the PTC-3 sample ###########
 
-table(seurat$orig.ident)
+# table(seurat$orig.ident)
+# 
+# ptc_3 <- subset(seurat, subset = orig.ident == "PTC-3")
+# 
+# 
+# qc_ptc_3 <- run_qc_pipeline(
+#   obj         = ptc_3,
+#   species     = "human",
+#   tissue      = c("Thyroid"),
+#   method      = "gmm",
+#   qc_strength = "auto",
+#   report_file = "Results/scQCenrich_ptc-3.html")
+# 
+# head(qc_ptc_3$status_df)
 
-ptc_3 <- subset(seurat, subset = orig.ident == "PTC-3")
+
+############### Loop through the process ###################
+
+######## 1. Subset samples from seurat object ##################
+
+######## 2. Run scQCenrich on each sample ############
+
+######## 3. Select the cells to keep (as decided by scQCenrich) #######
+
+sample_list <- unique(seurat$orig.ident)
+
+qc_status_list <- list()
+
+for (s in sample_list) {
+  
+  sub_obj <- subset(seurat, subset = orig.ident == s)
+  
+  res <- run_qc_pipeline(
+    obj         = sub_obj,
+    species     = "human",
+    tissue      = c("Thyroid"),
+    method      = "gmm",
+    qc_strength = "auto",
+    report_file = paste0("Results/scQCenrich_", s, ".html")
+  )
+  
+  qc_status_list[[s]] <- res$status_df
+}
 
 
-qc_ptc_3 <- run_qc_pipeline(
-  obj         = ptc_3,
-  species     = "human",
-  tissue      = c("Thyroid"),
-  method      = "gmm",
-  qc_strength = "auto",
-  report_file = "Results/scQCenrich_ptc-3.html"
-)
+########## Remove the Doublets from each sample #####################
 
-head(qc_ptc_3$status_df)
+####### 1. Select the cells to keep from scQCenrich results ###########
 
+####### 2. Run scDblFinder to identify doublets ##########
+
+####### 3. Keep the singlets ##################
 
 
