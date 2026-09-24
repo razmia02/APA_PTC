@@ -14,7 +14,8 @@ library(rmarkdown)
 library(scQCenrich)
 library(mclust)
 library(scDblFinder)
-library(singlecellexpreiment)
+library(SingleCellExperiment)
+library(ggplot2)
 
 
 ############ STEP-1: LOAD THE DATASET ##########################
@@ -146,6 +147,21 @@ for (s in sample_list) {
   qc_status_list[[s]] <- res$status_df
 }
 
+######## Combine all sample's qc into one table ###########
+
+qc_status_merge <- do.call(rbind, unname(qc_status_list))
+
+
+colnames(qc_status_list[["PTC-3"]]) #### Check the colnames 
+
+##### qc_status contains data to keep/remove/boderline cells ########
+
+######### ADD QC_STATUS OF CELLS TO SEURAT OBJECT ################
+
+seurat$qc_status <- qc_status_merge[colnames(seurat), "qc_status"]
+
+table(seurat$qc_status) ##### sanity check if the qc status is merged
+
 
 ########## Remove the Doublets from each sample #####################
 
@@ -155,4 +171,86 @@ for (s in sample_list) {
 
 ####### 3. Keep the singlets ##################
 
+
+sample_names <- unique(seurat$orig.ident)
+
+filtered_list <- list()
+
+dbl_status_list <- list()
+
+for (s in sample_names) {
+  sub_obj <- subset(seurat, subset = orig.ident == s & qc_status == "keep")
+  
+  ##### Convert the seurat object into singlecellexperiment
+  
+  sce <- as.SingleCellExperiment(sub_obj)
+  
+  sce <- scDblFinder(sce)
+  
+  #### add the scdblfinder results back to seurat object 
+  
+  sub_obj$scDblFinder.class <- sce$scDblFinder.class
+  
+  #### sanity check 
+  
+  print(table(sub_obj$scDblFinder.class))
+  
+  #### save the proportions of doublet/singlet per sample
+  
+  dbl_status_list[[s]] <- data.frame(
+    
+    orig.ident = sub_obj$orig.ident,
+    
+    scDblFinder.class = sub_obj$scDblFinder.class
+  )
+  
+  #### subset to singlets 
+  
+  sub_obj_sin <- subset(sub_obj, subset = scDblFinder.class == "singlet")
+  
+  filtered_list[[s]] <- sub_obj_sin
+}
+
+dbl_status_df <- do.call(rbind, unname(dbl_status_list))
+
+################# Merge the filtered list ##########################
+
+seurat_filt <- merge(filtered_list[[1]], y = filtered_list[-1], 
+                     project = "APA_thyroid")
+
+seurat_filt <- JoinLayers(seurat_filt)
+
+table(seurat_filt$orig.ident) #### sanity check
+
+table(seurat_filt$scDblFinder.class) #### sanity check
+
+
+######### Visualize the doublets per sample #################
+
+ggplot(dbl_status_df, aes(x = orig.ident, fill = scDblFinder.class)) +
+  geom_bar(position = "fill") +
+  theme_minimal() +
+  labs(y = "Proportion", title = "Doublet Proportion by Sample")
+
+
+####### Summary of doublet/singlet proportions per sample ##########
+
+dbl_summary_wide <- dbl_status_df %>%
+  group_by(orig.ident, scDblFinder.class) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  group_by(orig.ident) %>%
+  mutate(percent = round(100 * n / sum(n), 2)) %>%
+  ungroup() %>%
+  tidyr::pivot_wider(
+    id_cols = orig.ident,
+    names_from = scDblFinder.class,
+    values_from = c(n, percent)
+  )
+
+dbl_summary_wide
+
+##### PTC-3 have the highest proportion of doublets #############
+
+
+########## Normalization ################3
 
