@@ -16,6 +16,7 @@ library(mclust)
 library(scDblFinder)
 library(SingleCellExperiment)
 library(ggplot2)
+library(harmony)
 
 
 ############ STEP-1: LOAD THE DATASET ##########################
@@ -225,6 +226,8 @@ table(seurat_filt$orig.ident) #### sanity check
 table(seurat_filt$scDblFinder.class) #### sanity check
 
 
+########## FINAL SEURAT OBJECT: seurat_filt ####################
+
 ######### Visualize the doublets per sample #################
 
 ggplot(dbl_status_df, aes(x = orig.ident, fill = scDblFinder.class)) +
@@ -252,5 +255,89 @@ dbl_summary_wide
 ##### PTC-3 have the highest proportion of doublets #############
 
 
-########## Normalization ################3
+########## Normalization ################
+
+seurat_filt <- NormalizeData(seurat_filt)
+
+
+############### Find Variable Features #####################
+
+seurat_filt <- FindVariableFeatures(seurat_filt, nfeatures = 3000)
+
+
+top_features <- head(VariableFeatures(seurat_filt), 20)
+
+plot1 <- VariableFeaturePlot(seurat_filt)
+plot2 <- LabelPoints(plot = plot1, points = top_features, repel = TRUE)
+plot1 + plot2
+
+
+############### Scale Data #########################3
+
+seurat_filt <- ScaleData(seurat_filt)
+
+
+############## Linear Dimensionality Reduction (PCA) #####################
+
+seurat_filt <- RunPCA(seurat_filt, npcs = 50)
+
+ElbowPlot(seurat_filt, ndims = ncol(Embeddings(seurat_filt, "pca")))
+
+###### Elbow plot shows first 30-35 PCs showing the variation ###########
+
+##### Lets select first 30 PCs for downstream analysis ############
+
+############ Batch Correction using Harmony ################
+
+###### Run UMAP before & after to compare batch correction results ############
+
+seurat_filt <- RunUMAP(seurat_filt, reduction = "pca", 
+                  dims = 1:30, 
+                  reduction.name = "umap.unintegrated")
+
+plot1 <- DimPlot(seurat_filt, reduction = "umap.unintegrated", 
+        group.by = "condition") + ggtitle("Before Harmony")
+
+
+######### Run Harmony #########
+
+seurat_filt <- RunHarmony(seurat_filt, 
+                     group.by.vars = "condition", 
+                     dims.use = 1:30, max_iter = 50)
+
+
+########### Non-Linear Dimensionality Reduction (UMAP) ################
+
+seurat_filt <- RunUMAP(seurat_filt, reduction = "harmony", 
+                  dims = 1:30, reduction.name = "umap")
+
+
+plot2 <- DimPlot(seurat_filt, reduction = "umap", 
+                 group.by = "condition") + ggtitle("After Harmony")
+
+plot2
+
+
+plot1 + plot2 #### See if the batch correction was applied correctly
+
+
+########### Find Neighbours #################
+
+seurat_filt <- FindNeighbors(seurat_filt, dims = 1:30)
+
+############ Find Clusters ##################
+
+seurat_filt <- FindClusters(seurat_filt, resolution = 0.3) #### 19 clusters
+
+DimPlot(seurat_filt, reduction = "umap", label = TRUE)
+
+
+########### Find cluster markers ################
+
+cl_markers <- FindAllMarkers(seurat_filt, only.pos = TRUE, min.pct = 0.25, 
+                             logfc.threshold = log(1.2))
+
+View(cl_markers)
+
+cl_markers %>% group_by(cluster) %>% top_n(n = 2, wt = avg_log2FC)
 
