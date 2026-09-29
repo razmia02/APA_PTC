@@ -7,16 +7,12 @@ getwd()
 
 library(Seurat)
 library(dplyr)
-library(SoupX)
-library(remotes)
-library(knitr)
-library(rmarkdown)
 library(scQCenrich)
-library(mclust)
 library(scDblFinder)
 library(SingleCellExperiment)
 library(ggplot2)
 library(harmony)
+library(rPanglaoDB)
 
 
 ############ STEP-1: LOAD THE DATASET ##########################
@@ -340,4 +336,61 @@ cl_markers <- FindAllMarkers(seurat_filt, only.pos = TRUE, min.pct = 0.25,
 View(cl_markers)
 
 cl_markers %>% group_by(cluster) %>% top_n(n = 2, wt = avg_log2FC)
+
+
+############ Annotate clusters #################
+
+
+thyroid_markers <- list(
+  Thyrocyte    = c("TG", "TPO", "PAX8", "TSHR", "KRT8", "KRT18", "NKX2-1"),
+  T_cell       = c("CD3D", "CD3E", "CD2"),
+  B_cell       = c("CD79A", "MS4A1", "CD19", "PAX5", "CD22"),
+  Plasma       = c("MZB1", "CD38"),
+  Myeloid      = c("CD68", "CD14", "LYZ", "C1QA", "CD163", "CD33"),
+  NK           = c("NKG7", "GNLY", "KLRD1"),
+  Endothelial  = c("PECAM1", "VWF", "CLDN5", "CDH5", "CD34", "KDR", "FLT1"),
+  Fibroblast   = c("FAP", "DCN", "ACTA2", "COL1A1", "COL1A2", "DCN", "PDGFRA"),
+  SmoothMuscle = c("ACTA2", "RGS5", "MYH11", "TAGLN", "CNN1", "MYL9"),
+  Proliferating= c("MKI67", "TOP2A", "TYMS", "DUT")
+)
+
+DotPlot(seurat_filt, features = thyroid_markers, group.by = "seurat_clusters") +
+  RotatedAxis()
+
+
+VlnPlot(seurat_filt, features = c("CD68", "CD14", "LYZ", "C1QA", "CD163", "CD33"), 
+        pt.size = 0)
+
+
+table(seurat_filt$condition, seurat_filt$seurat_clusters)[, c("14")]
+
+
+thyrocyte_check <- FindMarkers(seurat_filt, ident.1 = "5", ident.2 = c("1","3","10"))
+
+##### Clusters: 1,3,5,10 are thyrocytes ####################
+
+##### Cluster: 14 is B-cell #################
+
+##### Cluster: 11, 18 are endothelial cells ###########
+
+##### Cluster: 15 is Fibroblast (has markers of Cancer-associated fibroblasts) ####
+
+##### Cluster: 4 is Smooth Muscle Cell ###############
+
+##### Cluster: 17 is Proliferating Cell ###########
+
+##### Cluster: 2, 13 are myeloid Cell #############
+
+
+
+
+
+
+
+
+
+
+
+
+
 
