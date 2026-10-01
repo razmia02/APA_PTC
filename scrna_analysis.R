@@ -12,7 +12,6 @@ library(scDblFinder)
 library(SingleCellExperiment)
 library(ggplot2)
 library(harmony)
-library(rPanglaoDB)
 
 
 ############ STEP-1: LOAD THE DATASET ##########################
@@ -281,14 +280,14 @@ ElbowPlot(seurat_filt, ndims = ncol(Embeddings(seurat_filt, "pca")))
 
 ###### Elbow plot shows first 30-35 PCs showing the variation ###########
 
-##### Lets select first 30 PCs for downstream analysis ############
+##### Lets select first 15 PCs for downstream analysis ############
 
 ############ Batch Correction using Harmony ################
 
 ###### Run UMAP before & after to compare batch correction results ############
 
 seurat_filt <- RunUMAP(seurat_filt, reduction = "pca", 
-                  dims = 1:30, 
+                  dims = 1:15, 
                   reduction.name = "umap.unintegrated")
 
 plot1 <- DimPlot(seurat_filt, reduction = "umap.unintegrated", 
@@ -299,13 +298,13 @@ plot1 <- DimPlot(seurat_filt, reduction = "umap.unintegrated",
 
 seurat_filt <- RunHarmony(seurat_filt, 
                      group.by.vars = "condition", 
-                     dims.use = 1:30, max_iter = 50)
+                     dims.use = 1:15, max_iter = 50)
 
 
 ########### Non-Linear Dimensionality Reduction (UMAP) ################
 
 seurat_filt <- RunUMAP(seurat_filt, reduction = "harmony", 
-                  dims = 1:30, reduction.name = "umap")
+                  dims = 1:15, reduction.name = "umap")
 
 
 plot2 <- DimPlot(seurat_filt, reduction = "umap", 
@@ -319,11 +318,12 @@ plot1 + plot2 #### See if the batch correction was applied correctly
 
 ########### Find Neighbours #################
 
-seurat_filt <- FindNeighbors(seurat_filt, dims = 1:30)
+seurat_filt <- FindNeighbors(seurat_filt, dims = 1:15)
 
 ############ Find Clusters ##################
 
-seurat_filt <- FindClusters(seurat_filt, resolution = 0.3) #### 19 clusters
+seurat_filt <- FindClusters(seurat_filt, resolution = 0.1) #### 8 clusters
+
 
 DimPlot(seurat_filt, reduction = "umap", label = TRUE)
 
@@ -343,11 +343,10 @@ cl_markers %>% group_by(cluster) %>% top_n(n = 2, wt = avg_log2FC)
 
 thyroid_markers <- list(
   Thyrocyte    = c("TG", "TPO", "PAX8", "TSHR", "KRT8", "KRT18", "NKX2-1"),
-  T_cell       = c("CD3D", "CD3E", "CD2"),
-  B_cell       = c("CD79A", "MS4A1", "CD19", "PAX5", "CD22"),
-  Plasma       = c("MZB1", "CD38"),
-  Myeloid      = c("CD68", "CD14", "LYZ", "C1QA", "CD163", "CD33"),
-  NK           = c("NKG7", "GNLY", "KLRD1"),
+  B_cell       = c("CD79A", "MS4A1", "CD79B", "IGKC", "CD74"),
+  Myeloid      = c("LYZ", "FCER1G", "TYROBP", "CD68", "CD14", "C1QA", "CD163", "CD33"),
+  T_cell       = c(),
+  NK_cell      = c(),
   Endothelial  = c("PECAM1", "VWF", "CLDN5", "CDH5", "CD34", "KDR", "FLT1"),
   Fibroblast   = c("FAP", "DCN", "ACTA2", "COL1A1", "COL1A2", "DCN", "PDGFRA"),
   SmoothMuscle = c("ACTA2", "RGS5", "MYH11", "TAGLN", "CNN1", "MYL9"),
@@ -358,39 +357,33 @@ DotPlot(seurat_filt, features = thyroid_markers, group.by = "seurat_clusters") +
   RotatedAxis()
 
 
-VlnPlot(seurat_filt, features = c("CD68", "CD14", "LYZ", "C1QA", "CD163", "CD33"), 
+VlnPlot(seurat_filt, features = c("PECAM1", "VWF", "CLDN5", "CDH5", "CD34", "KDR", "FLT1"), 
         pt.size = 0)
 
 
-table(seurat_filt$condition, seurat_filt$seurat_clusters)[, c("14")]
 
 
-thyrocyte_check <- FindMarkers(seurat_filt, ident.1 = "5", ident.2 = c("1","3","10"))
 
-##### Clusters: 1,3,5,10 are thyrocytes ####################
 
-##### Cluster: 14 is B-cell #################
 
-##### Cluster: 11, 18 are endothelial cells ###########
-
-##### Cluster: 15 is Fibroblast (has markers of Cancer-associated fibroblasts) ####
-
-##### Cluster: 4 is Smooth Muscle Cell ###############
-
-##### Cluster: 17 is Proliferating Cell ###########
-
-##### Cluster: 2, 13 are myeloid Cell #############
+saveRDS(seurat_filt, file = "seurat.rds")
+seurat_filt <- readRDS("seurat.rds")
 
 
 
 
 
 
+################# ADDITIONAL CODE #######################
 
+######### CHCEK HOW MANY PCS TO USE FOR DOWNSTREAM #################
 
-
-
-
-
-
-
+# pct <- seurat[["pca"]]@stdev / sum(seurat[["pca"]]@stdev) * 100
+# cumu <- cumsum(pct)
+# 
+# co1 <- which(cumu > 90 & pct < 5)[1]  # cumulative variance >90% AND this PC contributes <5% alone
+# co2 <- sort(which((pct[1:(length(pct)-1)] - pct[2:length(pct)]) > 0.1), decreasing = TRUE)[1] + 1
+# # last point where consecutive PCs still differ by >0.1%
+# 
+# pcs_selected <- min(co1, co2)
+# pcs_selected

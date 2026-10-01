@@ -3,5 +3,6 @@
 .Rhistory
 .RData
 .Ruserdata
+*.rds
 Data/*
 qc_outputs/*
