@@ -322,7 +322,7 @@ seurat_filt <- FindNeighbors(seurat_filt, dims = 1:15)
 
 ############ Find Clusters ##################
 
-seurat_filt <- FindClusters(seurat_filt, resolution = 0.1) #### 8 clusters
+seurat_filt <- FindClusters(seurat_filt, resolution = 0.3) #### 17 clusters
 
 
 DimPlot(seurat_filt, reduction = "umap", label = TRUE)
@@ -343,31 +343,101 @@ cl_markers %>% group_by(cluster) %>% top_n(n = 2, wt = avg_log2FC)
 
 thyroid_markers <- list(
   Thyrocyte    = c("TG", "TPO", "PAX8", "TSHR", "KRT8", "KRT18", "NKX2-1"),
-  B_cell       = c("CD79A", "MS4A1", "CD79B", "IGKC", "CD74"),
+  B_cell       = c("CD19", "CD79A", "MS4A1", "CD20","CD79B", "IGKC", "CD74", "CD22", "CD27"),
   Myeloid      = c("LYZ", "FCER1G", "TYROBP", "CD68", "CD14", "C1QA", "CD163", "CD33"),
-  T_cell       = c(),
-  NK_cell      = c(),
+  T_cell       = c("CD3", "CD3D", "CD3E", "CD4", "CD8", "CD2", "CD8A", "CD69", "CD28"),
   Endothelial  = c("PECAM1", "VWF", "CLDN5", "CDH5", "CD34", "KDR", "FLT1"),
   Fibroblast   = c("FAP", "DCN", "ACTA2", "COL1A1", "COL1A2", "DCN", "PDGFRA"),
   SmoothMuscle = c("ACTA2", "RGS5", "MYH11", "TAGLN", "CNN1", "MYL9"),
-  Proliferating= c("MKI67", "TOP2A", "TYMS", "DUT")
+  Proliferating_cell = c("MKI67", "TOP2A", "TYMS", "DUT")
 )
 
-DotPlot(seurat_filt, features = thyroid_markers, group.by = "seurat_clusters") +
-  RotatedAxis()
 
-
-VlnPlot(seurat_filt, features = c("PECAM1", "VWF", "CLDN5", "CDH5", "CD34", "KDR", "FLT1"), 
+VlnPlot(seurat_filt, features = c("RAMP2", "CD31", "CLDN5", "ERG"), 
         pt.size = 0)
 
 
+######## Cluster: 2,3,5,8 = thyrocytes ##############
+
+######## Cluster: 12 = B_cell ###############
+
+######## Cluster: 4,10 = Macrophage #########
+
+######## Cluster: 0,11 = CD8+ T_cell ###########
+
+######## Cluster: 1 = CD4+ T_cell ###########
+
+######## Cluster: 9,16 = Endothelial_cell ############
+
+######## Cluster: 13 = Fibroblast ###########
+
+######## Cluster: 6 = Smooth_Muscle ##########
+
+######## Cluster: 15 = Proliferating_Myeloid #########
+
+######## Cluster: 7 = Unknown #########
+
+cluster_7 <- FindMarkers(seurat_filt, ident.1 = "7")
+
+View(cluster_7)
 
 
+############# ANNOTATE THE CLUSTERS ###################
 
 
+new_ident <- setNames(c("0" = "CD8+T_cell", 
+                        "1" = "CD4+T_cell", 
+                        "2" = "Thyrocyte", 
+                        "3" = "Thyrocyte",
+                        "4" = "Macrophage", 
+                        "5" = "Thyrocyte", 
+                        "6" = "Smooth_Muscle", 
+                        "7" = "Unknown_1",
+                       "8" = "Thyrocyte", 
+                       "9" = "Endothelial_cell", 
+                       "10" = "Macrophage", 
+                       "11" = "CD8+T_cell",
+                       "12" = "B_cell", 
+                       "13" = "Fibroblast", 
+                       "14" = "Unknown_2", 
+                       "15" = "Proliferating_Myeloid",
+                      "16"  = "Endothelial_cell"),
+                      levels(seurat_filt))
+
+seurat_filt <- RenameIdents(seurat_filt, new_ident)
+
+DimPlot(seurat_filt, reduction = "umap", label = TRUE)
+
+# 0 = CD8+ T_cell
+# 1 = CD4+ T_cell
+# 2 = Thyrocyte
+# 3 = Thyrocyte
+# 4 = Macrophage
+# 5 = Thyrocyte
+# 6 = Smooth_Muscle
+# 7 = Unknown
+# 8 = Thyrocyte
+# 9 = Endothelial_cell
+# 10 = Macrophage
+# 11 = CD8+ T_cell
+# 12 = B_cell
+# 13 = Fibroblast
+# 14 = Unknown
+# 15 = Proliferating_Myeloid
+# 16 = Endothelial_cell
 
 saveRDS(seurat_filt, file = "seurat.rds")
+
 seurat_filt <- readRDS("seurat.rds")
+
+
+############### Malignant Cell Calling ###################
+
+########## Using thyrocyte cluster ##############
+
+
+
+
 
 
 

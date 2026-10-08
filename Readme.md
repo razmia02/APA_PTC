@@ -20,13 +20,13 @@ This is an active work in progress. The scRNA-seq QC and integration pipeline is
 - [x] Per-sample QC via [scQCenrich](https://github.com/lemonlyy755/scQCenrich) (GMM-based adaptive thresholding, cluster-coherence-aware)
 - [x] Per-sample doublet detection and removal (`scDblFinder`)
 - [x] Merge into single Seurat object (doublet and low-quality-cell-free)
-- [x] Normalization, variable feature selection (n=3000), scaling, PCA (30 PCs)
+- [x] Normalization, variable feature selection (n=3000), scaling, PCA (15 PCs)
 - [x] Batch/sample integration (Harmony)
-- [x] Clustering (resolution 0.3 → 19 clusters) and `FindAllMarkers`
+- [x] Clustering (resolution 0.3 → 17 clusters) and `FindAllMarkers`
 
 ### In progress / next
-- [ ] Cluster annotation (canonical thyroid + immune/stromal markers)
-- [ ] Malignant cell calling on epithelial cluster(s) via CNV inference (inferCNV/CopyKAT)
+- [x] Cluster annotation (canonical thyroid + immune/stromal markers)
+- [ ] Malignant cell calling on epithelial/thyrocyte cluster(s) via CNV inference (inferCNV/CopyKAT)
 - [ ] Cell-type composition comparison (Normal vs. PTC)
 - [ ] Pseudobulk differential expression (patient-level aggregation, n=3 per group)
 - [ ] FASTQ → BAM alignment via Galaxy/STARsolo (CB/UB-tagged BAM for APA calling)
