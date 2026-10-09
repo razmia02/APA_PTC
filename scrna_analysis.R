@@ -12,7 +12,8 @@ library(scDblFinder)
 library(SingleCellExperiment)
 library(ggplot2)
 library(harmony)
-
+library(copykat)
+library(devtools)
 
 ############ STEP-1: LOAD THE DATASET ##########################
 
@@ -353,7 +354,7 @@ thyroid_markers <- list(
 )
 
 
-VlnPlot(seurat_filt, features = c("RAMP2", "CD31", "CLDN5", "ERG"), 
+VlnPlot(seurat_filt, features = c("CD11C", "CD1C", "CD83", "CD86", "FCER1A", "CD80", "CD74", "FLT3"), 
         pt.size = 0)
 
 
@@ -431,18 +432,29 @@ saveRDS(seurat_filt, file = "seurat.rds")
 seurat_filt <- readRDS("seurat.rds")
 
 
-############### Malignant Cell Calling ###################
+############ Subset the seurat object to one sample only ##################
 
-########## Using thyrocyte cluster ##############
+cells <- colnames(seurat_filt)[seurat_filt$orig.ident == "Normal-1"]
 
+length(cells)
 
+mat <- LayerData(seurat_filt, assay = "RNA", layer = "data")[, cells]
 
+rownames(mat)
 
+################# Test run copykat ########################
 
-
-
-
-
+copykat.test <- copykat(rawmat = mat, 
+                        id.type="S", 
+                        ngene.chr=5, 
+                        win.size=25, 
+                        KS.cut=0.1, 
+                        sam.name="test", 
+                        distance="euclidean", 
+                        norm.cell.names="",
+                        output.seg="FLASE", 
+                        plot.genes="TRUE", 
+                        genome="hg20")
 
 ################# ADDITIONAL CODE #######################
 
